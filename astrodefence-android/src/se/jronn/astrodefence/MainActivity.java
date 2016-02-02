@@ -1,0 +1,98 @@
+package se.jronn.astrodefence;
+
+import android.content.Intent;
+import android.os.Bundle;
+
+import com.badlogic.gdx.backends.android.AndroidApplication;
+import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
+import com.google.example.games.basegameutils.GameHelper;
+import com.google.example.games.basegameutils.GameHelper.GameHelperListener;
+
+public class MainActivity extends AndroidApplication implements GameHelperListener, ActionResolver {
+
+    private GameHelper gameHelper;
+
+	public MainActivity(){
+		gameHelper = new GameHelper(this);
+		gameHelper.enableDebugLog(true, "GPGS");
+	}
+
+	/** Called when the activity is first created. */
+	@Override
+	public void onCreate (Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
+        
+        initialize(new MyGame(this), cfg);
+        gameHelper.setup(this);
+        
+        // Monitor launch times and interval from installation
+        RateThisApp.onStart(this);
+        // If the criteria is satisfied, "Rate this app" dialog will be shown
+        RateThisApp.showRateDialogIfNeeded(this);
+	}
+
+	@Override
+	public void onStart(){
+		super.onStart();
+		gameHelper.onStart(this);
+	}
+
+	@Override
+	public void onStop(){
+		super.onStop();
+		gameHelper.onStop();
+	}
+
+	@Override
+	public void onActivityResult(int request, int response, Intent data) {
+		super.onActivityResult(request, response, data);
+		gameHelper.onActivityResult(request, response, data);
+	}
+
+	@Override
+	public boolean getSignedInGPGS() {
+		return gameHelper.isSignedIn();
+	}
+
+	@Override
+	public void loginGPGS() {
+		try {
+			runOnUiThread(new Runnable(){
+				public void run() {
+					gameHelper.beginUserInitiatedSignIn();
+				}
+			});
+		} catch (final Exception ex) {
+		}
+	}
+
+	@Override
+	public void submitScoreGPGS(int score) {
+		gameHelper.getGamesClient().submitScore("", score);
+	}
+
+	@Override
+	public void unlockAchievementGPGS(String achievementId) {
+		gameHelper.getGamesClient().unlockAchievement(achievementId);
+	}
+
+	@Override
+	public void getLeaderboardGPGS() {
+		startActivityForResult(gameHelper.getGamesClient().getLeaderboardIntent(""), 100);
+	}
+
+	@Override
+	public void getAchievementsGPGS() {
+		startActivityForResult(gameHelper.getGamesClient().getAchievementsIntent(), 101);
+	}
+
+	@Override
+	public void onSignInFailed() {
+	}
+
+	@Override
+	public void onSignInSucceeded() {
+	}
+}

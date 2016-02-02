@@ -1,0 +1,357 @@
+package se.jronn.astrodefence.screens;
+
+import se.jronn.astrodefence.MyGame;
+import se.jronn.astrodefence.model.Earth;
+import se.jronn.astrodefence.model.Explosion;
+import se.jronn.astrodefence.model.GameInputProcessor;
+import se.jronn.astrodefence.model.GameObjects;
+import se.jronn.astrodefence.model.GameOverStage;
+import se.jronn.astrodefence.model.GameTick;
+import se.jronn.astrodefence.model.Meteor;
+import se.jronn.astrodefence.model.MyCamera;
+import se.jronn.astrodefence.model.PausedStage;
+import se.jronn.astrodefence.model.Rocket;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.math.Circle;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.utils.Align;
+
+/**
+ * Main game class. Draws everything on the game board.
+ * 
+ * @author Greedy
+ * @since 2014-03-06
+ * @version 1.0
+ */
+public class GameScreen implements Screen{
+
+	private MyGame game;
+	private GameTick gameTick;
+	private float wUnit;
+	private TextureAtlas atlas;
+	private TextureRegion[][] space;
+	private GameObjects go;
+	private GameInputProcessor input;
+	private FreeTypeFontGenerator fontgen;
+	private FreeTypeFontGenerator.FreeTypeFontParameter fontParam;
+	private BitmapFont font;
+	private Label label_score;
+	private Image pauseButton, shield;
+	private Sprite bomb;
+	private Sprite bombCover;
+	public static Boolean gameOver, gameOverProcessed;
+	private Boolean hasShield;
+	private Preferences prefs;
+	public Music music;
+	private Boolean soundOn;
+	private Sound gameOverSound;
+	
+	private SpriteBatch batch;
+	private Stage stage, pausedStage;
+	private GameOverStage gameOverStage;
+	public static MyCamera cam;
+	
+	public GameScreen (MyGame game) {
+		this.game = game;
+		go = new GameObjects();
+		gameTick = new GameTick(go);
+		input = new GameInputProcessor(go, gameTick);
+		Gdx.input.setInputProcessor(input);
+		gameOver = false;
+		gameOverProcessed = false;
+		
+		prefs = Gdx.app.getPreferences("se.jronn.astrodefence");
+		soundOn = prefs.getBoolean("sound");
+		
+		gameOverSound = MyGame.manager.get("sound/gameOver.wav", Sound.class);
+		
+		fontgen = new FreeTypeFontGenerator(Gdx.files.internal("fonts/visitor1.ttf"));
+		
+		music=MyGame.manager.get("sound/Ouroboros.mp3", Music.class);
+		music.setLooping(true);
+		music.setVolume(0.05f);
+		if(soundOn)
+			music.play();
+	}
+	
+	@Override
+	public void render(float delta) {
+
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+		Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+
+		if(!GameInputProcessor.pausedStatus)
+			gameTick.update(delta);
+		
+		//Check if game over (out of health)
+		if(go.getEarth().getHealth() <= 0)
+			gameOver = true;
+		
+		cam.update();    
+		batch.setProjectionMatrix(cam.combined);
+		
+		batch.begin();
+		
+		//Draw background
+		for(int i = 0; i < 6; i++)
+			for(int j = 0; j < 12; j++)
+				batch.draw(space[i][j], j*Gdx.graphics.getHeight()/4 - Gdx.graphics.getHeight()/4, i*Gdx.graphics.getHeight()/4 - Gdx.graphics.getHeight()/8, Gdx.graphics.getHeight()/8, Gdx.graphics.getHeight()/8, Gdx.graphics.getHeight()/4, Gdx.graphics.getHeight()/4, 1, 1, (90*j)%360, false);
+		
+		//Draw meteors
+		for(Meteor m : go.getMeteors()) {
+			m.draw(batch); 
+		}
+		
+		//Draw explosions
+		for(Explosion e : go.getExplosions()) {
+			batch.draw(e.getKeyFrame(), e.getX(), e.getY(), e.getWidth(), e.getHeight());
+		}
+
+		//Draw current target
+		if(input.currentTarget()) {
+			input.getTarget(delta).draw(batch);
+		}
+		
+		//Draw all targets
+		for(Sprite t : go.getTargets()) {
+			t.draw(batch);
+		}
+		
+		//Draw crosses (inside target)
+		for(Sprite c : go.getCrosses()) {
+			c.draw(batch);
+		}
+		
+		//Draw rockets
+		for(Rocket r : go.getRockets()) {
+			r.draw(batch);
+		}
+		
+		//Draw earth
+		go.getEarth().draw(batch, 1);
+		
+		//Check if has shield still
+		if(go.getEarth().getHealth() <= 1) {
+			hasShield = false;
+			
+			float locX = go.getEarth().getX()+go.getEarth().getWidth()/2;
+			float locY = go.getEarth().getY()+go.getEarth().getHeight()/2;
+			float locRadius = go.getEarth().getWidth()/2f;
+
+			go.getEarth().setCollisionCircle(new Circle(locX, locY, locRadius));
+		}
+		
+		//Draw shield
+		if(hasShield) {
+			shield.draw(batch, 1);
+		}
+		
+		//Draw bomb
+		if(!gameOver && !GameInputProcessor.pausedStatus) {
+			if(go.getEarth().bombPowerFull())
+				bomb.draw(batch, 1);
+			else
+				bomb.draw(batch, 0.5f);
+		}
+		
+		//Draw pause button
+		if(!gameOver)
+			pauseButton.draw(batch, 1);
+		
+		//Draw screen flash
+		if(go.getScreenFlash().getOpacity() > 0) {
+			go.getScreenFlash().draw(batch, go.getScreenFlash().getOpacity());
+			go.getScreenFlash().setOpacity(go.getScreenFlash().getOpacity() - 1 * delta);
+		}
+		else if (go.getScreenFlash().getOpacity() < 0) {
+			go.getScreenFlash().setOpacity(0);
+		}
+		batch.end();
+		
+		//Draw bomb cover based on bombPower percent
+		if(!gameOver && !GameInputProcessor.pausedStatus) {
+			Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+			Gdx.gl.glScissor((int)bomb.getWidth()/8, (int)bomb.getWidth()/8, (int)bombCover.getWidth(), (int)(bombCover.getHeight() * (1 - go.getEarth().getBombPercent())));
+			batch.begin();
+			//Draw bomb cover		
+			bombCover.draw(batch, 0.3f);
+			batch.end();
+			Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+		}
+		
+		//Update score
+		label_score.setText(Integer.toString(go.getEarth().getScore()));
+				
+		//Set appropriate scene
+		if(gameOver) {
+			if(!gameOverProcessed) {
+				gameOverProcessed = true;
+				Gdx.input.setInputProcessor(gameOverStage);
+				gameTick.stopMeteorSpawn();
+				
+				gameOverStage.setScore(go.getEarth().getScore());
+				
+				if(soundOn)
+					gameOverSound.play(0.1f);
+			}
+
+			gameOverStage.act();
+			gameOverStage.draw();
+		}
+		else if(GameInputProcessor.pausedStatus) {
+			Gdx.input.setInputProcessor(pausedStage);
+			pausedStage.act();
+			pausedStage.draw();
+		}
+		else {
+			Gdx.input.setInputProcessor(input);
+			stage.act();
+			stage.draw();
+		}
+	}
+
+	@Override
+	public void resize(int width, int height) {
+		
+		wUnit = height / 10;
+		stage = new Stage(width, height);
+		
+		cam = new MyCamera(width, height);
+		cam.position.x = width/2;
+		cam.position.y = height/2;
+		
+		//Set up font to be used
+		fontParam = new FreeTypeFontGenerator.FreeTypeFontParameter();
+		fontParam.size = height/9;
+		fontParam.characters = FreeTypeFontGenerator.DEFAULT_CHARS;
+		font = fontgen.generateFont(fontParam);
+		
+		//Set up bomb icon
+		bomb = new Sprite(atlas.findRegion("btnBomb"));
+		bomb.setSize(height/6, (0.9f) * height/6);
+		bomb.setPosition(bomb.getWidth()/8, bomb.getWidth()/8);
+		go.setBombButton(bomb);
+		
+		//Set up bomb cover
+		bombCover = new Sprite(atlas.findRegion("btnBombCover"));	
+		bombCover.setSize(bomb.getWidth(), bomb.getHeight());
+		bombCover.setPosition(bomb.getX(), bomb.getY());
+		
+		//Set up score label
+		label_score = new Label("0", new Label.LabelStyle(font, new Color(0.8f, 0.6f, 0.22f, 1)));
+		label_score.setAlignment(Align.center);
+		label_score.setPosition(width/2 - label_score.getWidth()/2, height - label_score.getHeight() * 1.1f);
+		stage.addActor(label_score);
+		
+		//Set up earth
+		Earth earth = go.getEarth();
+		earth.setSize(wUnit * 2.5f, wUnit * 2.5f);
+		earth.setPosition((width - earth.getWidth())/2, (height - earth.getHeight())/2);
+		go.setEarth(earth);
+		
+		/**
+		 * UPGRADES
+		 */
+		//Check if upgrade "shield" is present, set collision radius of earth
+		if(prefs.getInteger("shield") > 0 && prefs.getInteger("shield") < 6) {
+			hasShield = true;
+			//Set up shield
+			shield = new Image(atlas.findRegion("shield"));
+			shield.setSize(go.getEarth().getWidth() * 1.2f, go.getEarth().getHeight() * 1.2f);
+			shield.setPosition(go.getEarth().getX() - go.getEarth().getWidth() * 0.1f, go.getEarth().getY() - go.getEarth().getHeight() * 0.1f);
+			
+			float locX = go.getEarth().getX()+go.getEarth().getWidth()/2;
+			float locY = go.getEarth().getY()+go.getEarth().getHeight()/2;
+			float locRadius = shield.getWidth()/2;
+
+			earth.setCollisionCircle(new Circle(locX, locY, locRadius));
+			
+			//Increase max health
+			go.getEarth().addMaxHealth(1 * prefs.getInteger("shield"));
+		}
+		else {
+			hasShield = false;
+			
+			float locX = go.getEarth().getX()+go.getEarth().getWidth()/2;
+			float locY = go.getEarth().getY()+go.getEarth().getHeight()/2;
+			float locRadius = go.getEarth().getWidth()/2f;
+
+			earth.setCollisionCircle(new Circle(locX, locY, locRadius));
+		}
+		
+		//Set up bomb info, based on bomb upgrades
+		if(prefs.getInteger("bomb") > 0 && prefs.getInteger("bomb") < 6) {
+			go.getEarth().setBombRegen((5 + 1 * prefs.getInteger("bomb"))/2);
+		}
+		else {
+			go.getEarth().clearBombPower();
+		}
+		
+		//Missile speed based on upgrade is set in Rocket.java class
+		
+		/**
+		 * END OF UPGRADES
+		 */
+		
+		//Set up pause button
+		pauseButton = new Image(atlas.findRegion("btnPause"));
+		pauseButton.setSize(height/10, height/10);
+		pauseButton.setPosition(width - pauseButton.getWidth() * 1.5f, height - pauseButton.getHeight() * 1.5f);
+		go.setPauseButton(pauseButton);
+		
+		//Set up several background images to place next to each other
+		space = new TextureRegion[6][12];
+		for(int i = 0; i < 6; i++)
+			for(int j = 0; j < 12; j++) {
+				space[i][j] = atlas.findRegion("space");
+			}
+		
+		//Set up game over stage
+		gameOverStage = new GameOverStage(game, width, height, go);
+		
+		//Set up paused stage
+		pausedStage = new PausedStage(game, width, height, go);
+				
+	}
+
+	@Override
+	public void show() {
+		batch = new SpriteBatch();
+		atlas = MyGame.manager.get("data/game/game.pack", TextureAtlas.class);
+	}
+	
+	@Override
+	public void hide() {
+		dispose();
+	}
+
+	@Override
+	public void pause() {
+	}
+
+	@Override
+	public void resume() {
+	}
+
+	@Override
+	public void dispose() {
+		batch.dispose();
+		fontgen.dispose();
+	}
+
+}

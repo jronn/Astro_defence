@@ -1,0 +1,144 @@
+package se.jronn.astrodefence.model;
+
+import se.jronn.astrodefence.MyGame;
+import se.jronn.astrodefence.screens.GameScreen;
+import se.jronn.astrodefence.screens.MainMenuScreen;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+
+public class PausedStage extends Stage{
+	private MyGame game;
+	private float width, height;
+	private TextureAtlas atlas;
+	private Image pausedBg, pausedButton1, pausedButton2, pausedButton3, pausedTitle;
+	private Image btn_soundOn, btn_soundOff;
+	private Boolean soundOn;
+	private Preferences prefs;
+	private GameObjects go;
+	
+	public PausedStage(MyGame game, float width, float height, GameObjects go) {
+		super(width, height);
+		this.game = game;
+		this.width = width;
+		this.height = height;
+		this.go = go;
+		atlas = MyGame.manager.get("data/game/game.pack", TextureAtlas.class);
+		prefs = Gdx.app.getPreferences("se.jronn.astrodefence");
+		soundOn = prefs.getBoolean("sound");
+		setUpStage();
+	}
+	
+	private void setUpStage() {
+		
+		//BG box
+		pausedBg = new Image(atlas.findRegion("pauseBg"));
+		pausedBg.setSize(width, height);
+		pausedBg.setPosition(0, 0);
+		
+		//title "paused"
+		pausedTitle = new Image(atlas.findRegion("paused"));
+		pausedTitle.setSize(height/2, height/10);
+		pausedTitle.setPosition(width/2 - pausedTitle.getWidth()/2, height - pausedTitle.getHeight() * 2f);
+		
+		//Button box 1, menu
+		pausedButton1 = new Image(atlas.findRegion("btnMenu"));
+		pausedButton1.setSize(height/5, height/5);
+		pausedButton1.setPosition(width/2 - 3 * pausedButton1.getWidth()/2 - pausedButton1.getWidth() * 0.2f, height/2 - pausedButton1.getHeight()/2);
+		pausedButton1.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 game.setScreen(new MainMenuScreen(game));
+                 return true;
+			 }
+		});
+		
+
+		//Button box 2, restart
+		pausedButton2 = new Image(atlas.findRegion("btnRestart"));
+		pausedButton2.setSize(height/5, height/5);
+		pausedButton2.setPosition(width/2 - pausedButton2.getWidth()/2, height/2 - pausedButton2.getHeight()/2);
+		pausedButton2.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 //game.setScreen(new GameScreen(game));
+				 go.reset();
+				 GameTick.spawnInterval = 1.5f;
+				 if(prefs.getBoolean("sound"))
+					 GameScreen.music.play();
+				 GameInputProcessor.pausedStatus = false;
+                 return true;
+			 }
+		});
+
+		
+		//Button box 3, resume
+		pausedButton3 = new Image(atlas.findRegion("btnResume"));
+		pausedButton3.setSize(height/5, height/5);
+		pausedButton3.setPosition(width/2 + pausedButton3.getWidth()/2 + pausedButton3.getWidth() * 0.2f, height/2 - pausedButton3.getHeight()/2);
+		pausedButton3.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 if(prefs.getBoolean("sound"))
+					 GameScreen.music.play();
+				 GameInputProcessor.pausedStatus = false;
+                 return true;
+			 }
+		});
+		
+		btn_soundOn = new Image(atlas.findRegion("btnSoundOn"));
+		btn_soundOn.setSize(height/6, height/6);
+		btn_soundOn.setPosition(btn_soundOn.getWidth()/2, btn_soundOn.getWidth()/2);
+		btn_soundOn.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 soundChange();
+				 return true;
+			 }
+		});
+		
+		btn_soundOff = new Image(atlas.findRegion("btnSoundOff"));
+		btn_soundOff.setSize(height/6, height/6);
+		btn_soundOff.setPosition(btn_soundOff.getWidth()/2, btn_soundOff.getWidth()/2);
+		btn_soundOff.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 soundChange();
+				 return true;
+			 }
+		});
+		
+		if(soundOn)
+			btn_soundOff.setVisible(false);
+		else
+			btn_soundOn.setVisible(false);
+		
+		this.addActor(pausedBg);
+		this.addActor(pausedTitle);
+		this.addActor(pausedButton1);
+		this.addActor(pausedButton2);
+		this.addActor(pausedButton3);
+		this.addActor(btn_soundOn);
+		this.addActor(btn_soundOff);
+	}
+	
+	private void soundChange() {
+		if(soundOn) {
+			soundOn = false;
+			btn_soundOn.setVisible(false);
+			btn_soundOff.setVisible(true);
+			prefs.putBoolean("sound", false);
+			prefs.flush();
+			GameTick.soundOn = false;
+		}
+		else {
+			soundOn = true;
+			btn_soundOn.setVisible(true);
+			btn_soundOff.setVisible(false);
+			prefs.putBoolean("sound", true);
+			prefs.flush();
+			GameTick.soundOn = true;
+		}
+	}
+	
+}

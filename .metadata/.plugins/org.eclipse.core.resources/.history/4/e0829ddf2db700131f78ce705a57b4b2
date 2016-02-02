@@ -1,0 +1,298 @@
+package se.jronn.astrodefence.model;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Random;
+
+import se.jronn.astrodefence.MyGame;
+import se.jronn.astrodefence.screens.GameScreen;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Circle;
+import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Pool;
+
+/**
+ * Handles game updates for each "tick" of the game loop
+ * Called every time the GameScreen draws, before the drawing happens.
+ * 
+ * @author Greedy
+ * @since 2014-03-06
+ * @version 1.0
+ */
+public class GameTick {
+	
+	public boolean clearField;
+	public static float spawnInterval;
+	
+	float timer;
+	private TextureAtlas atlas;
+	private GameObjects go;
+	private Circle earthCircle;
+	private Circle meteorCircle;
+	private Circle exploCircle;
+	private Rectangle crossRect;
+	public static boolean meteorSpawn;
+	
+	private ArrayList<Meteor> meteors;
+	private ArrayList<Explosion> explosions;
+	private ArrayList<Sprite> targets;
+	private ArrayList<Rocket> rockets;
+	private ArrayList<Sprite> crosses;
+	private Earth earth;
+	
+	private Random rand;
+	private Sound exploSound;
+	public static Boolean soundOn;
+	
+	private float meteorSpeed;
+	
+	// explosion pool.
+    private final Pool<Explosion> explosionPool = new Pool<Explosion>() {
+        @Override
+        protected Explosion newObject() {
+                return new Explosion();
+        }
+    };
+    
+	// meteor pool.
+    private final Pool<Meteor> meteorPool = new Pool<Meteor>() {
+        @Override
+        protected Meteor newObject() {
+        	String textureName;
+        	
+        	//Get one of the 4 types of meteor texture at random
+			Random rand = new Random();
+			switch(rand.nextInt(4)) {
+				case 0: textureName = "meteor1";
+					break;
+				case 1: textureName = "meteor2";
+					break;
+				case 2: textureName = "meteor3";
+					break;
+				case 3: textureName = "meteor4";
+					break;
+				default: textureName = "meteor1";
+					break;
+			}
+					
+			atlas = MyGame.manager.get("data/game/game.pack", TextureAtlas.class);
+			TextureRegion texture = atlas.findRegion(textureName);		
+            return new Meteor(texture);
+        }
+    };
+	
+	public GameTick(GameObjects go) {
+		timer = 0;
+		this.go = go;
+		spawnInterval = 1.5f;
+		meteorSpawn = true;
+		clearField = false;
+		meteorCircle = new Circle();
+		earthCircle = go.getEarth().getCollisionCircle();
+		exploCircle = new Circle();
+		crossRect = new Rectangle();
+		rand = new Random();
+		exploSound= MyGame.manager.get("sound/Explosion.wav", Sound.class);	
+		Preferences prefs = Gdx.app.getPreferences("se.jronn.astrodefence");
+		soundOn = prefs.getBoolean("sound");
+	}
+	
+	/**
+	 * Updates everything relating to the game
+	 * 
+	 * @param delta Time since last tick
+	 * @param go Contains all game objects
+	 */
+	public void update(float delta) {
+		timer += delta;
+		getObjects();
+		
+		//Update camera shake
+		GameScreen.cam.updateShake(delta);
+		
+		//Regenerate ammo & bomb power
+		earth.addAmmo(3f*delta);
+		earth.addBombPower(delta);
+		
+		//Clear meteors if bomb has been triggered from input
+		if(clearField) {
+			clearField = false;
+			
+			//Trigger camera shake
+			GameScreen.cam.shake(0.01f, Gdx.graphics.getHeight()/25);
+			
+			//Update screen flash
+			go.getScreenFlash().setOpacity(1);
+			
+			//Remove all meteors and add explosions where they were
+	    	Iterator<Meteor> iterMe = meteors.iterator();
+			while(iterMe.hasNext()){
+			    Meteor m = iterMe.next();
+			    Explosion exp = explosionPool.obtain();
+			    exp.init(m.getX() - m.getWidth()/2, m.getY() - m.getHeight()/2, m.getWidth() * 2);
+			    explosions.add(exp);
+			    	
+			    iterMe.remove();
+			    meteorPool.free(m);
+			    	
+			    earth.addScore(10);
+			}
+		}
+		
+		//Add explosions while screenFlash is still running
+		if(go.getScreenFlash().getOpacity() > 0.6) {
+			Explosion exp = explosionPool.obtain();
+		    exp.init(Gdx.graphics.getWidth() * rand.nextFloat() - Gdx.graphics.getHeight()/8 , Gdx.graphics.getHeight() * rand.nextFloat() - Gdx.graphics.getHeight()/8, Gdx.graphics.getHeight()/2 * rand.nextFloat() + 1);
+		    explosions.add(exp);
+	    	
+	    	//Play explosion sound
+		    if(soundOn)
+		    	exploSound.play(0.5f, rand.nextFloat() * 0.5f + 0.75f ,0);
+		}
+		
+		//Add meteors
+		if(meteorSpawn && timer > spawnInterval) {
+			if(spawnInterval > 0.2)
+				spawnInterval -= 0.02f;
+			
+			timer = 0;
+			Gdx.app.log("Spawn interval", Float.toString(spawnInterval));
+			Meteor meteor = meteorPool.obtain();
+	    	meteor.init();
+	    	meteors.add(meteor);
+		}
+		
+		//Update explosion animations
+		Iterator<Explosion> iterE = explosions.iterator();
+		while(iterE.hasNext()){
+		    Explosion e = iterE.next();
+		    if(e.update(delta)) {
+		    	iterE.remove();
+		    	explosionPool.free(e);
+		    }
+		}
+		
+		//Update targets
+		for(Sprite t : targets)
+			t.rotate(30*delta);
+		
+		//Update rockets position
+		for(Rocket r : rockets)
+			r.move(delta);
+		
+		//Check if rocket has reached destination
+		Iterator<Rocket> iterR = rockets.iterator();
+		while(iterR.hasNext()){
+		    Rocket r = iterR.next();
+		    
+		    Sprite cross = go.getRocketCrossMap().get(r);
+		    crossRect.width = cross.getWidth()/4;
+		    crossRect.height = cross.getHeight()/4;
+		    crossRect.x = cross.getX() + crossRect.width;
+		    crossRect.y = cross.getY() + crossRect.height;
+		    
+		    if(Intersector.overlaps(r.getBoundingRectangle(), crossRect)) {
+		    	
+		    	Sprite target = go.getCrossTargetMap().get(cross);
+
+		    	//Remove cross
+		    	crosses.remove(cross);
+		    	
+		    	//Remove target
+		    	targets.remove(target);
+		    	
+		    	//Remove rocket
+		    	iterR.remove();
+		    	
+		    	//Add explosion
+		    	Explosion exp = explosionPool.obtain();
+		    	exp.init(cross.getX() - (target.getWidth() * target.getScaleX()/2) + cross.getWidth()/2, cross.getY() - (target.getHeight() * target.getScaleX()/2) + cross.getWidth()/2, target.getWidth() * target.getScaleX());
+		    	explosions.add(exp);
+		    	
+		    	//Play explosion sound
+		    	if(soundOn)
+		    		exploSound.play(0.5f, rand.nextFloat() * 0.5f + 0.75f ,0);
+		    	
+		    	//Check for asteroids in explosion radius, remove and add explosion if found
+		    	exploCircle.setRadius(target.getWidth() * target.getScaleX()/2);
+		    	exploCircle.setPosition(cross.getX() + cross.getWidth()/2, cross.getY() + cross.getHeight()/2);
+		    	
+		    	Iterator<Meteor> iterMe = meteors.iterator();
+				while(iterMe.hasNext()){
+				    Meteor m = iterMe.next();
+				    meteorCircle.setPosition(m.getX()+m.getWidth()/2, m.getY()+m.getHeight()/2);
+				    meteorCircle.setRadius(m.getWidth()/2);
+				    if(Intersector.overlaps(exploCircle, meteorCircle)) {
+				    	exp = explosionPool.obtain();
+				    	exp.init(m.getX(), m.getY(), m.getWidth());
+				    	explosions.add(exp);
+				    	
+				    	iterMe.remove();
+				    	meteorPool.free(m);
+				    	
+				    	earth.addScore(10);
+				    }
+				}
+		    }
+		}
+		
+		earthCircle = go.getEarth().getCollisionCircle();
+		
+		//Move each meteor, and check if it collides with the earth. Remove if it does
+		Iterator<Meteor> iterM = meteors.iterator();
+		while(iterM.hasNext()){
+		    Meteor m = iterM.next();
+		    m.move(delta);
+		    meteorCircle.setPosition(m.getX()+m.getWidth()/2, m.getY()+m.getHeight()/2);
+		    meteorCircle.setRadius(m.getWidth()/3);
+		    if(Intersector.overlaps(earthCircle, meteorCircle)) {
+		    	Explosion exp = explosionPool.obtain();
+		    	exp.init(m.getX(), m.getY(), m.getWidth());
+		    	explosions.add(exp);
+		    	
+		    	iterM.remove();
+		    	meteorPool.free(m);
+		    	
+		    	//Trigger camera shake
+		    	if(!GameScreen.gameOver)
+		    		GameScreen.cam.shake(0.01f, Gdx.graphics.getHeight()/25);
+		    	
+		    	earth.damage(1);
+		    }
+		}
+		
+		saveObjects();
+	}
+	
+	//Stops meteors from spawning
+	public void stopMeteorSpawn() {
+		meteorSpawn = false;
+	}
+	
+	//Retrieves objects from GameObjects class
+	private void getObjects() {
+		meteors = go.getMeteors();
+		explosions = go.getExplosions();
+		targets = go.getTargets();
+		crosses = go.getCrosses();
+		rockets = go.getRockets();
+		earth = go.getEarth();
+	}
+	
+	//Saves object changes to the GameObjects class
+	private void saveObjects() {
+		go.setMeteors(meteors);
+		go.setExplosions(explosions);
+		go.setTargets(targets);
+		go.setRockets(rockets);
+		go.setCrosses(crosses);
+		go.setEarth(earth);
+	}
+}

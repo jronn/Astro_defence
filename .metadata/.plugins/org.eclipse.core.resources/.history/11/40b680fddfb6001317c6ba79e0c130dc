@@ -1,0 +1,17 @@
+package se.jronn.astrodefence;
+
+import se.jronn.astrodefence.MyGame;
+
+import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
+import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+
+public class Main {
+	public static void main(String[] args) {
+		LwjglApplicationConfiguration cfg = new LwjglApplicationConfiguration();
+		cfg.title = "earth_defence";
+		cfg.width = 800;
+		cfg.height = 800;
+
+		new LwjglApplication(new MyGame(new ActionResolverDesktop()), cfg);
+	}
+}

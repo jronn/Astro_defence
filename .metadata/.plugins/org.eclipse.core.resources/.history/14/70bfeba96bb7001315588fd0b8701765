@@ -1,0 +1,180 @@
+package se.jronn.astrodefence.model;
+
+import se.jronn.astrodefence.MyGame;
+import se.jronn.astrodefence.screens.GameScreen;
+import se.jronn.astrodefence.screens.MainMenuScreen;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+
+public class GameOverStage extends Stage{
+	
+	private MyGame game;
+	private float width, height;
+	private TextureAtlas atlas;
+	private FreeTypeFontGenerator fontgen;
+	private FreeTypeFontGenerator.FreeTypeFontParameter fontParam;
+	private BitmapFont fontSmall, fontBig;
+	private Label label_gameOverScore, label_gameOverHighscore, label_gameOverScoreNo, label_nextToken;
+	private Image gameOverBg, gameOverButton1, gameOverButton2, gameOverTitle;
+	private GameObjects go;
+	
+	public GameOverStage(MyGame game, float width, float height, GameObjects go) {
+		super(width, height);
+		this.game = game;
+		this.width = width;
+		this.height = height;
+		this.go = go;
+		atlas = MyGame.manager.get("data/game/game.pack", TextureAtlas.class);
+		setUpStage();
+	}
+	
+	private void setUpStage() {
+		
+		fontParam = new FreeTypeFontGenerator.FreeTypeFontParameter();
+		fontgen = new FreeTypeFontGenerator(Gdx.files.internal("fonts/visitor1.ttf"));
+	
+		fontParam.size = (int)(height/15);
+		fontSmall = fontgen.generateFont(fontParam);
+		
+		fontParam.size = (int)(height/5);
+		fontBig = fontgen.generateFont(fontParam);
+		
+		//Game over title
+		gameOverTitle = new Image(atlas.findRegion("gameOver"));
+		gameOverTitle.setSize(8 * height/8, height/8);
+		gameOverTitle.setPosition(width/2 - gameOverTitle.getWidth()/2, height - gameOverTitle.getHeight() * 1.5f);
+		
+		//BG box
+		gameOverBg = new Image(atlas.findRegion("boxMedium"));
+		gameOverBg.setSize(1.5f * height/2.5f, height/2.5f);
+		gameOverBg.setPosition(width/2 - gameOverBg.getWidth()/2 + (1.2f * height/5.5f)/2, gameOverTitle.getY() - gameOverBg.getHeight()*1.2f);
+		
+		//Button box 1, menu
+		gameOverButton1 = new Image(atlas.findRegion("btnMenu"));
+		gameOverButton1.setSize(height/5.5f, height/5.5f);
+		gameOverButton1.setPosition(gameOverBg.getX() - gameOverButton1.getWidth() * 1.2f, gameOverBg.getY());
+		gameOverButton1.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 GameScreen.music.pause();
+				 game.setScreen(new MainMenuScreen(game));
+                 return true;
+			 }
+		});
+
+
+		//Button box 2, restart
+		gameOverButton2 = new Image(atlas.findRegion("btnRestart"));
+		gameOverButton2.setSize(height/5.5f, height/5.5f);
+		gameOverButton2.setPosition(gameOverBg.getX() - gameOverButton2.getWidth() * 1.2f, gameOverBg.getY() + gameOverBg.getHeight() - gameOverButton1.getHeight());
+		gameOverButton2.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 //game.setScreen(new GameScreen(game));
+				 go.reset();
+				 GameScreen.gameOver = false;
+				 GameScreen.gameOverProcessed = false;
+				 GameTick.spawnInterval = 2f;
+				 GameTick.meteorSpeed = Gdx.graphics.getHeight()/20;
+				 GameTick.meteorSpawn = true;
+				 reset();
+                 return true;
+			 }
+		});
+
+		label_gameOverScore = new Label("SCORE", new Label.LabelStyle(fontSmall, new Color(0.25f, 0.18f, 0.02f, 1)));
+		label_gameOverScore.setPosition(gameOverBg.getX() + gameOverBg.getWidth()/2 - label_gameOverScore.getWidth()/2, gameOverBg.getY() + gameOverBg.getHeight() - label_gameOverScore.getHeight() * 1.3f);
+			
+		this.addActor(gameOverTitle);
+		this.addActor(gameOverBg);
+		this.addActor(gameOverButton1);
+		this.addActor(gameOverButton2);
+		this.addActor(label_gameOverScore);
+	}
+
+	protected void reset() {
+		this.getRoot().removeActor(label_gameOverScoreNo);
+		this.getRoot().removeActor(label_gameOverHighscore);
+		this.getRoot().removeActor(label_nextToken);
+	}
+
+	public void setScore(int score) {
+		label_gameOverScoreNo = new Label(Integer.toString(score), new Label.LabelStyle(fontBig, new Color(0.25f, 0.18f, 0.02f, 1)));
+		label_gameOverScoreNo.setPosition(gameOverBg.getX() + gameOverBg.getWidth()/2 - label_gameOverScoreNo.getWidth()/2, label_gameOverScore.getY() - label_gameOverScoreNo.getHeight() * 1.1f);
+		this.addActor(label_gameOverScoreNo);
+		
+		Preferences prefs = Gdx.app.getPreferences("se.jronn.astrodefence");
+		if(score >= prefs.getInteger("highscore")) {
+			prefs.putInteger("highscore", score);
+
+			//Encode score, to try to prevent the simplest form of cheating by altering preferences
+			
+			prefs.putString("check", Integer.toHexString((score + 51235) ^ 56211));
+			
+			label_gameOverHighscore = new Label("NEW BEST!", new Label.LabelStyle(fontSmall, new Color(0.25f, 0.18f, 0.02f, 1)));
+			
+			//Add score to global highscore and unlock achievements
+			if (game.actionResolver.getSignedInGPGS()) {
+				 game.actionResolver.submitScoreGPGS(score);
+			}
+		}
+		else {
+			label_gameOverHighscore = new Label("BEST: " + prefs.getInteger("highscore"), new Label.LabelStyle(fontSmall, new Color(0.25f, 0.18f, 0.02f, 1)));	
+		}
+		
+		//Handle tokens
+		int totalTokens = prefs.getInteger("totalToken");
+		int totalScore = prefs.getInteger("totalScore");
+		totalScore += score;
+		prefs.putInteger("totalScore", totalScore);
+		
+		
+		///TEST
+		for(int i = 0; i < 9000; i+=400) {
+			for(int j = 0; j < 15; j++) {
+				if(i > j * 500 + 500 && j < 15) {
+					Math.floor((i - (j * 500) - 500)/500);
+					Gdx.app.log("TEST", "Score: " + i + ", HAS: " + j + " EARNS: " + Math.floor((i - (j * 500))/500));
+				}
+			}
+		}
+		
+		if(totalScore > 7000) {
+			prefs.putInteger("totalToken", 15);
+			prefs.putInteger("upgradeToken", prefs.getInteger("upgradeToken") + (15 - prefs.getInteger("upgradeToken")));
+		}
+		
+		if(totalScore > totalTokens * 500 && totalTokens < 15) {
+			Math.floor((totalScore - (totalTokens * 500))/500);
+			prefs.putInteger("totalToken", totalTokens + 1);
+			prefs.putInteger("upgradeToken", prefs.getInteger("upgradeToken") + 1);
+			
+			label_nextToken = new Label("NEW UPGRADE TOKEN EARNED!", new Label.LabelStyle(fontSmall, new Color(1, 1, 1, 1)));
+			label_nextToken.setPosition(width/2 - label_nextToken.getWidth()/2, gameOverBg.getY() - label_nextToken.getHeight() * 1.5f);
+		}
+		else if(totalTokens >= 15){
+			label_nextToken = new Label("ALL TOKENS EARNED!", new Label.LabelStyle(fontSmall, new Color(1, 1, 1, 1)));
+			label_nextToken.setPosition(width/2 - label_nextToken.getWidth()/2, gameOverBg.getY() - label_nextToken.getHeight() * 1.5f);
+		}
+		else {
+			label_nextToken = new Label("NEW TOKEN AT " + (100 + totalTokens * 150) + " POINTS", new Label.LabelStyle(fontSmall, new Color(1, 1, 1, 1)));
+			label_nextToken.setPosition(width/2 - label_nextToken.getWidth()/2, gameOverBg.getY() - label_nextToken.getHeight() * 1.5f);
+		}
+		
+		this.addActor(label_nextToken);
+		
+		prefs.flush();
+		
+		label_gameOverHighscore.setPosition(gameOverBg.getX() + gameOverBg.getWidth()/2 - label_gameOverHighscore.getWidth()/2, gameOverBg.getY() + label_gameOverHighscore.getHeight() * 0.4f);
+		this.addActor(label_gameOverHighscore);
+	}
+	
+}

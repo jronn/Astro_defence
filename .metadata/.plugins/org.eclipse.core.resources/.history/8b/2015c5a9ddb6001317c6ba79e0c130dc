@@ -1,0 +1,306 @@
+
+game.png
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+earth2
+  rotate: false
+  xy: 1, 743
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+earthMenu
+  rotate: false
+  xy: 1, 485
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+shield
+  rotate: false
+  xy: 259, 743
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+space
+  rotate: false
+  xy: 1, 227
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+target
+  rotate: false
+  xy: 259, 485
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+boxMedium
+  rotate: false
+  xy: 517, 833
+  size: 255, 166
+  orig: 255, 166
+  offset: 0, 0
+  index: -1
+logo
+  rotate: false
+  xy: 1, 173
+  size: 233, 52
+  orig: 233, 52
+  offset: 0, 0
+  index: -1
+gameOver
+  rotate: false
+  xy: 259, 453
+  size: 240, 30
+  orig: 240, 30
+  offset: 0, 0
+  index: -1
+bombUpgrade
+  rotate: false
+  xy: 517, 703
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+btnAdd
+  rotate: false
+  xy: 774, 871
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+btnBomb
+  rotate: false
+  xy: 904, 892
+  size: 119, 107
+  orig: 119, 107
+  offset: 0, 0
+  index: -1
+btnBack
+  rotate: false
+  xy: 1, 43
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+btnMenu
+  rotate: false
+  xy: 259, 323
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+btnPause
+  rotate: false
+  xy: 517, 573
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+btnRestart
+  rotate: false
+  xy: 647, 703
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+btnResume
+  rotate: false
+  xy: 647, 573
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+btnBombCover
+  rotate: false
+  xy: 904, 783
+  size: 119, 107
+  orig: 119, 107
+  offset: 0, 0
+  index: -1
+upgrades
+  rotate: false
+  xy: 517, 531
+  size: 200, 40
+  orig: 200, 40
+  offset: 0, 0
+  index: -1
+btnSoundOff
+  rotate: false
+  xy: 389, 323
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+btnSoundOn
+  rotate: false
+  xy: 131, 43
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+missileUpgrade
+  rotate: false
+  xy: 259, 193
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+shieldUpgrade
+  rotate: false
+  xy: 389, 193
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+explosion
+  rotate: false
+  xy: 261, 71
+  size: 120, 120
+  orig: 120, 120
+  offset: 0, 0
+  index: 1
+explosion
+  rotate: false
+  xy: 383, 71
+  size: 120, 120
+  orig: 120, 120
+  offset: 0, 0
+  index: 2
+explosion
+  rotate: false
+  xy: 777, 749
+  size: 120, 120
+  orig: 120, 120
+  offset: 0, 0
+  index: 3
+explosion
+  rotate: false
+  xy: 777, 627
+  size: 120, 120
+  orig: 120, 120
+  offset: 0, 0
+  index: 4
+explosion
+  rotate: false
+  xy: 899, 661
+  size: 120, 120
+  orig: 120, 120
+  offset: 0, 0
+  index: 5
+btnHighscore
+  rotate: false
+  xy: 1, 1
+  size: 160, 40
+  orig: 160, 40
+  offset: 0, 0
+  index: -1
+btnStart
+  rotate: false
+  xy: 517, 489
+  size: 160, 40
+  orig: 160, 40
+  offset: 0, 0
+  index: -1
+explosion
+  rotate: false
+  xy: 519, 367
+  size: 120, 120
+  orig: 120, 120
+  offset: 0, 0
+  index: 6
+explosion
+  rotate: false
+  xy: 519, 245
+  size: 120, 120
+  orig: 120, 120
+  offset: 0, 0
+  index: 7
+btnUpgrade
+  rotate: false
+  xy: 261, 29
+  size: 160, 40
+  orig: 160, 40
+  offset: 0, 0
+  index: -1
+meteor2
+  rotate: false
+  xy: 777, 527
+  size: 120, 98
+  orig: 120, 98
+  offset: 0, 0
+  index: -1
+meteor4
+  rotate: false
+  xy: 899, 563
+  size: 98, 96
+  orig: 98, 96
+  offset: 0, 0
+  index: -1
+btnScore
+  rotate: false
+  xy: 519, 203
+  size: 157, 40
+  orig: 157, 40
+  offset: 0, 0
+  index: -1
+paused
+  rotate: false
+  xy: 519, 171
+  size: 150, 30
+  orig: 150, 30
+  offset: 0, 0
+  index: -1
+meteor1
+  rotate: false
+  xy: 505, 85
+  size: 101, 84
+  orig: 101, 84
+  offset: 0, 0
+  index: -1
+meteor3
+  rotate: false
+  xy: 608, 87
+  size: 89, 82
+  orig: 89, 82
+  offset: 0, 0
+  index: -1
+rocket
+  rotate: false
+  xy: 641, 397
+  size: 30, 90
+  orig: 30, 90
+  offset: 0, 0
+  index: -1
+cross
+  rotate: false
+  xy: 423, 37
+  size: 32, 32
+  orig: 32, 32
+  offset: 0, 0
+  index: -1
+flash
+  rotate: false
+  xy: 1021, 779
+  size: 2, 2
+  orig: 2, 2
+  offset: 0, 0
+  index: -1
+labelBg
+  rotate: false
+  xy: 1021, 775
+  size: 2, 2
+  orig: 2, 2
+  offset: 0, 0
+  index: -1
+pauseBg
+  rotate: false
+  xy: 1021, 771
+  size: 2, 2
+  orig: 2, 2
+  offset: 0, 0
+  index: -1

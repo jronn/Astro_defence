@@ -1,0 +1,369 @@
+package se.jronn.astrodefence.screens;
+
+import java.util.ArrayList;
+import java.util.Random;
+
+import se.jronn.astrodefence.MyGame;
+import se.jronn.astrodefence.model.GameTick;
+import se.jronn.astrodefence.model.Meteor;
+import se.jronn.astrodefence.model.UpgradeStage;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.utils.Align;
+
+public class MainMenuScreen implements Screen {
+
+	private MyGame game;
+	private TextureAtlas atlas;
+	private SpriteBatch batch;
+	private Stage stage;
+	private TextureRegion[][] space;
+	private ArrayList<Meteor> meteors;
+	private Image earth;
+	private Image btn_start;
+	private Image btn_upgrade;
+	private Image btn_score;
+	private Image btn_soundOn;
+	private Image btn_soundOff;
+	private Image logo;
+	private UpgradeStage upgradeStage;
+	private Stage creditStage;
+	private Stage helpStage;
+	public Boolean upgradeScreen;
+	public Boolean helpScreen;
+	private Random rand;
+	private Boolean soundOn;
+	private Boolean creditScreen;
+	private Preferences prefs;
+	private Music music;
+	private FreeTypeFontGenerator fontgen;
+	private FreeTypeFontGenerator.FreeTypeFontParameter fontParam;
+	private BitmapFont font;
+	private Label credits;
+	private Label help;
+	private Label creditLabel;
+	
+	public MainMenuScreen(MyGame game) {
+		this.game = game;
+		upgradeScreen = false;
+		creditScreen = false;
+		helpScreen = false;
+		prefs = Gdx.app.getPreferences("se.jronn.astrodefence");
+		soundOn = prefs.getBoolean("sound");
+		
+		music=Gdx.audio.newMusic(Gdx.files.internal("sound/Ouroboros.mp3"));
+		music.setLooping(true);
+		music.setVolume(0.03f);
+		if(soundOn)
+			music.play();
+		
+	}
+	
+	@Override
+	public void render(float delta) {	
+		
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+		Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+		
+		batch.begin();
+		
+		//Draw background
+		for(int i = 0; i < 2; i++)
+			for(int j = 0; j < 4; j++)
+				batch.draw(space[i][j], j*Gdx.graphics.getHeight()/2, i*Gdx.graphics.getHeight()/2, Gdx.graphics.getHeight()/2, Gdx.graphics.getHeight()/2);
+		
+		earth.draw(batch, 1);
+		//Draw meteors
+		for(Meteor m : meteors) {
+			m.move(delta);
+			if(m.getX() > Gdx.graphics.getWidth()*1.3f || m.getX() < -Gdx.graphics.getWidth()*0.3f 
+					|| m.getY() > Gdx.graphics.getHeight()*1.3f || m.getY() < -Gdx.graphics.getHeight()*0.3f ) {
+				m.init();
+				m.setTarget(Gdx.graphics.getWidth() * rand.nextFloat(), Gdx.graphics.getHeight() * rand.nextFloat());
+			}
+			m.draw(batch);
+		}
+
+		if(upgradeScreen)
+			for(int i = 0; i < upgradeStage.upgradeLevel.length; i++)
+				for(Sprite s : upgradeStage.upgradeLevel[i])
+					s.draw(batch);
+		
+		batch.end();
+		
+		if(upgradeScreen) {
+			Gdx.input.setInputProcessor(upgradeStage);
+			upgradeStage.updateUpgradeLevels("shield");
+			upgradeStage.updateUpgradeLevels("missile");
+			upgradeStage.updateUpgradeLevels("bomb");
+			upgradeStage.draw();
+		}
+		else if(creditScreen) {
+			Gdx.input.setInputProcessor(creditStage);
+			creditStage.draw();
+		}
+		else if(helpScreen) {
+			Gdx.input.setInputProcessor(helpStage);
+			helpStage.draw();
+		}
+		else {
+			Gdx.input.setInputProcessor(stage);
+			stage.act(delta);
+			stage.draw();
+		}
+	}
+
+	@Override
+	public void resize(int width, int height) {	
+		
+		stage = new Stage(width, height);
+		upgradeStage = new UpgradeStage(this, width, height);
+		creditStage = new Stage(width, height);
+		helpStage = new Stage(width, height);
+		Gdx.input.setInputProcessor(stage);
+		
+		//Set up several background images to place next to each other
+		space = new TextureRegion[2][4];
+		for(int i = 0; i < 2; i++)
+			for(int j = 0; j < 4; j++) 
+				space[i][j] = atlas.findRegion("space");		
+		
+		earth = new Image(atlas.findRegion("earthMenu"));
+		earth.setSize(height/2, height/2);
+		earth.setPosition(0, 0);
+		
+		logo = new Image(atlas.findRegion("logo"));
+		logo.setSize(4.5f * height/5, height/5);
+		logo.setPosition(width/2 - logo.getWidth()/2, height - logo.getHeight() * 1.4f);
+
+		
+		btn_score = new Image(atlas.findRegion("btnScore"));
+		btn_score.setSize(height/2, height/8);
+		btn_score.setPosition(width/2 - btn_score.getWidth()/2, btn_score.getHeight() * 1.2f);
+		
+		btn_score.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 
+				if (game.actionResolver.getSignedInGPGS()) {								
+					//Submit score, decrypt check variable and check so that it matches, to prevent simple cheats
+					try {
+						if(prefs.getString("check") != "" && prefs.getInteger("highscore") != 0) {
+							
+							if(((Integer.parseInt(prefs.getString("check"), 16) ^ 56211) - 51235) == prefs.getInteger("highscore")) {
+								game.actionResolver.submitScoreGPGS(prefs.getInteger("highscore"));
+					    	}
+						}
+					}catch(Exception e) {
+						e.printStackTrace();
+					}			
+					game.actionResolver.getLeaderboardGPGS();
+				}
+				else game.actionResolver.loginGPGS();
+
+				return true;
+			 }
+		});
+		
+		
+		btn_upgrade = new Image(atlas.findRegion("btnUpgrade"));
+		btn_upgrade.setSize(height/2, height/8);
+		btn_upgrade.setPosition(width/2 - btn_upgrade.getWidth()/2, btn_score.getY() + btn_upgrade.getHeight() * 1.2f);	
+		
+		btn_upgrade.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 upgradeScreen = true;
+                 return true;
+			 }
+		});
+		
+		btn_start = new Image(atlas.findRegion("btnStart"));
+		btn_start.setSize(height/2, height/8);
+		btn_start.setPosition(width/2 - btn_start.getWidth()/2, btn_upgrade.getY() + btn_upgrade.getHeight() * 1.2f);
+		
+		btn_start.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 music.pause();
+				 game.setScreen(new GameScreen(game));
+                 return true;
+			 }
+		});
+		
+		btn_soundOn = new Image(atlas.findRegion("btnSoundOn"));
+		btn_soundOn.setSize(height/6, height/6);
+		btn_soundOn.setPosition(btn_soundOn.getWidth()/5, btn_soundOn.getWidth());
+		btn_soundOn.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 soundChange();
+				 return true;
+			 }
+		});
+		
+		btn_soundOff = new Image(atlas.findRegion("btnSoundOff"));
+		btn_soundOff.setSize(height/6, height/6);
+		btn_soundOff.setPosition(btn_soundOn.getWidth()/5, btn_soundOn.getWidth());
+		btn_soundOff.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 soundChange();
+				 return true;
+			 }
+		});
+		
+		if(soundOn)
+			btn_soundOff.setVisible(false);
+		else
+			btn_soundOn.setVisible(false);
+		
+		
+		//Set up credits stage
+		fontParam = new FreeTypeFontGenerator.FreeTypeFontParameter();
+		fontgen = new FreeTypeFontGenerator(Gdx.files.internal("fonts/visitor1.ttf"));
+	
+		fontParam.size = (int)(height/17);
+		font = fontgen.generateFont(fontParam);
+		
+		credits = new Label("CREDITS", new Label.LabelStyle(font, new Color(0.8f, 0.6f, 0.22f, 1)));
+		credits.setPosition(width - credits.getWidth() * 1.2f, 0.5f * credits.getHeight());
+		credits.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 creditScreen = true;
+				 return true;
+			 }
+		});
+	
+		creditLabel = new Label("Music\nOuroboros - Kevin MacLeod (incompetech.com)\n\nArt\nMeteors and background - www.kenney.nl\n\n\n\nClick to continue", new Label.LabelStyle(font, new Color(1, 1, 1, 1)));
+		creditLabel.setPosition(width/2 - creditLabel.getWidth()/2, height/2 - creditLabel.getHeight()/2);
+		creditLabel.setAlignment(Align.left);
+		
+		creditStage.addActor(creditLabel);
+		creditStage.addListener(new InputListener() {
+	        public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+	            creditScreen = false;
+	            return true;  
+	        }
+		});
+		
+		//Set up help stage
+		Image helpImg = new Image(atlas.findRegion("help1"));
+		helpImg.setSize(height/1.2f, height/1.2f);
+		helpImg.setPosition(width/2 - helpImg.getWidth()/2, height/2 - helpImg.getHeight()/2);
+		helpStage.addActor(helpImg);
+		helpStage.addListener(new InputListener() {
+	        public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+	            helpScreen = false;
+	            return true;  
+	        }
+		});
+		
+		fontParam.size = (int)(height/5);
+		font = fontgen.generateFont(fontParam);
+		
+		help = new Label("?", new Label.LabelStyle(font, new Color(0.8f, 0.6f, 0.22f, 1)));
+		help.setPosition(credits.getX() + credits.getWidth()/2 - help.getWidth()/2, credits.getY() + credits.getHeight() * 1.5f);
+		help.addListener(new InputListener() {
+			 public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				 helpScreen = true;
+				 return true;
+			 }
+		});
+		
+		stage.addActor(logo);
+		stage.addActor(btn_start);
+		stage.addActor(btn_upgrade);
+		stage.addActor(btn_score);
+		stage.addActor(btn_soundOn);
+		stage.addActor(btn_soundOff);
+		stage.addActor(credits);
+		stage.addActor(help);
+	}
+
+	@Override
+	public void show() {
+		atlas = MyGame.manager.get("data/game/game.pack", TextureAtlas.class);
+		batch = new SpriteBatch();
+		meteors = new ArrayList<Meteor>();
+		rand = new Random();
+		spawnMeteors();
+	}
+	
+	private void soundChange() {
+		if(soundOn) {
+			soundOn = false;
+			btn_soundOn.setVisible(false);
+			btn_soundOff.setVisible(true);
+			prefs.putBoolean("sound", false);
+			prefs.flush();
+			GameTick.soundOn = false;
+			music.pause();
+		}
+		else {
+			soundOn = true;
+			btn_soundOn.setVisible(true);
+			btn_soundOff.setVisible(false);
+			prefs.putBoolean("sound", true);
+			prefs.flush();
+			GameTick.soundOn = true;
+			music.play();
+		}
+	}
+	
+	private void spawnMeteors() {
+		String textureName;
+    	
+    	//Get one of the 4 types of meteor texture at random		
+		for(int i = 0; i < 5; i++) {
+
+        	//Get one of the 4 types of meteor texture at random
+			switch(rand.nextInt(4)) {
+				case 0: textureName = "meteor1";
+					break;
+				case 1: textureName = "meteor2";
+					break;
+				case 2: textureName = "meteor3";
+					break;
+				case 3: textureName = "meteor4";
+					break;
+				default: textureName = "meteor1";
+					break;
+			}
+			
+			Meteor m = new Meteor(atlas.findRegion(textureName));
+			m.setTarget(Gdx.graphics.getWidth() * rand.nextFloat(), Gdx.graphics.getHeight() * rand.nextFloat());
+			meteors.add(m);
+		}
+	}
+
+	@Override
+	public void hide() {
+		dispose();
+	}
+
+	@Override
+	public void pause() {
+	}
+
+	@Override
+	public void resume() {
+	}
+
+	@Override
+	public void dispose() {
+		batch.dispose();
+	}
+
+}
